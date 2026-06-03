@@ -570,6 +570,7 @@ else:
             return {}
         priced = df["monthly_price"].dropna()
         sqft_priced = df.dropna(subset=["monthly_price", "sqft"])
+        sqft_priced = sqft_priced[sqft_priced["sqft"] > 0]
         if sqft_priced.empty:
             ppsqft = None
         else:
