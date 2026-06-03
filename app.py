@@ -44,6 +44,20 @@ RENTAL_TABS = [("Daily", "daily"), ("Monthly", "monthly"), ("Yearly", "yearly")]
 
 MAX_SCRAPE_ATTEMPTS = 3
 
+# Column config for the Price Summary table — adds an explanatory tooltip to the
+# Fair Price column. (Fair Price = trimmed mean: drop the top & bottom 10% of
+# prices, then average — reduces the influence of outliers.)
+SUMMARY_COL_CONFIG = {
+    "Fair Price (RM)": st.column_config.NumberColumn(
+        "Fair Price (RM)",
+        help=(
+            "Fair Price = rata-rata harga setelah memangkas 10% data termurah "
+            "dan termahal (trimmed mean), memberikan estimasi harga wajar dengan "
+            "mengurangi pengaruh outlier."
+        ),
+    ),
+}
+
 
 # --------------------------------------------------------------------------- #
 # Cached scraping (session-level caching)
@@ -133,7 +147,8 @@ def render_area_results(
     if summary.empty:
         st.info("Not enough priced data.")
     else:
-        st.dataframe(summary, use_container_width=True, hide_index=True)
+        st.dataframe(summary, use_container_width=True, hide_index=True,
+                     column_config=SUMMARY_COL_CONFIG)
 
     if not compact:
         # Insights
@@ -337,10 +352,20 @@ if app_mode == "🔍 Single Search":
     else:
         all_listings_filtered = all_listings
 
-    # Rental-type tabs
-    tab_objects = st.tabs([label for label, _ in RENTAL_TABS])
+    # Rental-type tabs. Hide the Daily tab when it has no listings (SPEEDHOME's
+    # /rent listings are monthly-tenancy, so Daily is almost always empty — an
+    # empty tab makes users think the app is broken). Monthly & Yearly always show.
+    active_tabs = [
+        (label, rtype)
+        for label, rtype in RENTAL_TABS
+        if rtype != "daily" or filter_by_rental_type(all_listings_filtered, "daily")
+    ]
+    if not active_tabs:  # safety net — always render at least the Monthly tab
+        active_tabs = [("Monthly", "monthly")]
 
-    for tab, (label, rental_type) in zip(tab_objects, RENTAL_TABS):
+    tab_objects = st.tabs([label for label, _ in active_tabs])
+
+    for tab, (label, rental_type) in zip(tab_objects, active_tabs):
         with tab:
             listings = filter_by_rental_type(all_listings_filtered, rental_type)
 
@@ -388,7 +413,8 @@ if app_mode == "🔍 Single Search":
             if summary.empty:
                 st.info("Not enough priced data to build a summary.")
             else:
-                st.dataframe(summary, use_container_width=True, hide_index=True)
+                st.dataframe(summary, use_container_width=True, hide_index=True,
+                     column_config=SUMMARY_COL_CONFIG)
 
             # Insights
             st.subheader("💡 Insights")
@@ -713,14 +739,16 @@ else:
         if summary_a.empty:
             st.info("No data.")
         else:
-            st.dataframe(summary_a, use_container_width=True, hide_index=True)
+            st.dataframe(summary_a, use_container_width=True, hide_index=True,
+                         column_config=SUMMARY_COL_CONFIG)
 
     with col_b:
         st.markdown(f"**🟠 {name_b}**")
         if summary_b.empty:
             st.info("No data.")
         else:
-            st.dataframe(summary_b, use_container_width=True, hide_index=True)
+            st.dataframe(summary_b, use_container_width=True, hide_index=True,
+                         column_config=SUMMARY_COL_CONFIG)
 
     # ------------------------------------------------------------------ #
     # SECTION 5 — AUTO VERDICT
