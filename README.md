@@ -22,10 +22,13 @@ in **RM** and **sqft**.
   that also returns neighbouring areas; the app filters those out so you only see
   listings actually in the area you searched (see **Area filtering** below).
 - **Price summary table** grouped by unit type with **Count, Average, Median,
-  Mode, Fair Price** (trimmed mean dropping the top & bottom 10%), and **Avg sqft**.
+  Mode, Fair Price** (trimmed mean dropping the top & bottom 10%), **Min, Max,
+  Avg sqft**, and **Price/sqft** (average monthly rent per square foot).
 - **Unit listings table** — Title, Property name, Address, Room type,
   Monthly price (RM), Annual price (RM), sqft, Furnishing status, and a clickable
   **View Listing** link (last column) that opens the original listing on SPEEDHOME.
+  Includes **sort** (by monthly price or sqft, ascending/descending) and a
+  **filter by room type**; missing values render as a clean "—".
 - **Rental-type tabs** — Daily / Monthly / Yearly, split by each listing's minimum
   lease duration, each with a clear empty-state message when there's no data.
 - **Box-plot price distribution** per unit type (Plotly).
