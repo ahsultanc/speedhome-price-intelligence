@@ -36,7 +36,22 @@ import random
 import re
 import tempfile
 import time
+from datetime import datetime, timedelta, timezone
 from urllib.parse import urljoin, urlparse
+
+# Asia/Kuala_Lumpur (UTC+8). Prefer the IANA tz via zoneinfo; fall back to a
+# fixed +08:00 offset if the tz database isn't available on the host.
+try:
+    from zoneinfo import ZoneInfo
+
+    _KL_TZ = ZoneInfo("Asia/Kuala_Lumpur")
+except Exception:  # noqa: BLE001
+    _KL_TZ = timezone(timedelta(hours=8))
+
+
+def kl_now_str(fmt: str = "%H:%M:%S") -> str:
+    """Current time in Asia/Kuala_Lumpur, formatted (default HH:MM:SS)."""
+    return datetime.now(_KL_TZ).strftime(fmt)
 
 from bs4 import BeautifulSoup
 
@@ -649,6 +664,9 @@ def scrape_area(query: str, max_pages: int = 20):
         "count": len(listings),
         "used_json": source in ("json", "html+json"),
         "source": source,
+        # Wall-clock time (Asia/Kuala_Lumpur) the scrape completed. Cached along
+        # with the result, so it reflects when the data was actually fetched.
+        "scraped_at": kl_now_str(),
         "debug": _build_debug(pl, html, source),
     }
     return listings, meta
