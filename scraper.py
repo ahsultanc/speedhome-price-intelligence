@@ -765,3 +765,46 @@ def filter_by_rental_type(listings: list[dict], rental_type: str) -> list[dict]:
             if l.get("min_duration") is not None and l["min_duration"] <= 1
         ]
     return list(listings)
+
+
+# --------------------------------------------------------------------------- #
+# Demo / sample-data fallback
+#
+# When live scraping is blocked (e.g. Cloudflare on a datacenter IP), the UI can
+# fall back to bundled sample results from demo_data.json so the app still shows
+# something useful. The file is keyed by normalised area name.
+# --------------------------------------------------------------------------- #
+_DEMO_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), "demo_data.json")
+_demo_cache: dict | None = None
+
+
+def demo_key(query: str) -> str:
+    """Normalised lookup key for the demo file (matches how data is stored)."""
+    if is_speedhome_url(query):
+        seg = [s for s in urlparse(query).path.split("/") if s]
+        area = seg[-1].replace("-", " ") if seg else ""
+    else:
+        area = query
+    return _norm_text(canonical_area_name(area))
+
+
+def load_demo_data(query: str):
+    """Return (listings, meta) sample data for ``query`` from demo_data.json.
+
+    Returns (None, None) when the file is missing/unreadable or has no entry for
+    the requested area. The returned meta carries ``is_demo = True``.
+    """
+    global _demo_cache
+    if _demo_cache is None:
+        try:
+            with open(_DEMO_PATH, encoding="utf-8") as fh:
+                _demo_cache = json.load(fh)
+        except (OSError, json.JSONDecodeError):
+            _demo_cache = {}
+    entry = _demo_cache.get(demo_key(query))
+    if not entry:
+        return None, None
+    listings = entry.get("listings", [])
+    meta = dict(entry.get("meta", {}))
+    meta["is_demo"] = True
+    return listings, meta

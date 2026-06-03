@@ -18,6 +18,7 @@ from scraper import (
     filter_by_area,
     filter_by_rental_type,
     is_speedhome_url,
+    load_demo_data,
     scrape_area,
 )
 from utils import (
@@ -316,23 +317,32 @@ if app_mode == "🔍 Single Search":
     area = meta.get("area", active_query)
 
     if blocked:
-        cached_scrape.clear()
-        st.error("🛡️ SPEEDHOME is currently blocking this request (Cloudflare).")
-        st.markdown(
-            f"The app automatically retried **{MAX_SCRAPE_ATTEMPTS} times** but each "
-            "attempt received a **Cloudflare challenge**. This typically happens on "
-            "shared cloud servers — not a bug in the app."
-        )
-        if st.button("🔄 Try again", type="primary", key="cf_retry"):
-            cached_scrape.clear()
-            st.rerun()
-        with st.expander("What can I do?"):
-            st.markdown(
-                "- **Wait and click 'Try again'** — blocks are often temporary.\n"
-                "- **Run locally** for a reliable demo: `python -m streamlit run app.py`.\n"
-                "- **For always-on use**, route requests through a residential proxy."
+        # Fallback: if we have bundled sample data for this area, show it.
+        demo_listings, demo_meta = load_demo_data(active_query)
+        if demo_listings:
+            st.warning(
+                "⚠️ Showing cached sample data (live scraping temporarily unavailable)"
             )
-        st.stop()
+            all_listings, meta = demo_listings, demo_meta
+            area = meta.get("area", active_query)
+        else:
+            cached_scrape.clear()
+            st.error("🛡️ SPEEDHOME is currently blocking this request (Cloudflare).")
+            st.markdown(
+                f"The app automatically retried **{MAX_SCRAPE_ATTEMPTS} times** but each "
+                "attempt received a **Cloudflare challenge**. This typically happens on "
+                "shared cloud servers — not a bug in the app."
+            )
+            if st.button("🔄 Try again", type="primary", key="cf_retry"):
+                cached_scrape.clear()
+                st.rerun()
+            with st.expander("What can I do?"):
+                st.markdown(
+                    "- **Wait and click 'Try again'** — blocks are often temporary.\n"
+                    "- **Run locally** for a reliable demo: `python -m streamlit run app.py`.\n"
+                    "- **For always-on use**, route requests through a residential proxy."
+                )
+            st.stop()
 
     # Data freshness timestamp (Asia/Kuala_Lumpur).
     st.caption(f"🕒 Data scraped at: **{meta.get('scraped_at', '—')} MYT**")
@@ -594,6 +604,17 @@ else:
             st.error(f"Scraping failed for **{q}**: {err}")
             st.stop()
 
+    # Fallback to bundled sample data per area when blocked.
+    used_demo = False
+    if blocked_a:
+        dl, dm = load_demo_data(q_a)
+        if dl:
+            listings_a, meta_a, blocked_a, used_demo = dl, dm, False, True
+    if blocked_b:
+        dl, dm = load_demo_data(q_b)
+        if dl:
+            listings_b, meta_b, blocked_b, used_demo = dl, dm, False, True
+
     for blocked, q in [(blocked_a, q_a), (blocked_b, q_b)]:
         if blocked:
             cached_scrape.clear()
@@ -602,6 +623,11 @@ else:
                 cached_scrape.clear()
                 st.rerun()
             st.stop()
+
+    if used_demo:
+        st.warning(
+            "⚠️ Showing cached sample data (live scraping temporarily unavailable)"
+        )
 
     name_a = meta_a.get("area", q_a)
     name_b = meta_b.get("area", q_b)
