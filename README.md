@@ -68,6 +68,33 @@ On macOS / Linux the only difference is activating the venv with
 
 ---
 
+## Testing all areas
+
+`test_all_areas.py` is a smoke-test harness that scrapes **every area** in
+`scraper.AREAS` and reports the outcome for each:
+
+1. **OK** — listings returned (with the count)
+2. **BLOCKED** — Cloudflare challenge / non-200 / no page data
+3. **EMPTY** — reachable but 0 listings
+4. **Response time** per area
+
+Run it from the project root (with dependencies installed):
+
+```powershell
+python test_all_areas.py
+```
+
+It prints a live progress line per area, then a summary table and totals, and
+writes a `test_results.csv` (columns: `area, status, total, in_area, http,
+source, secs, error`) for review. The CSV is regenerated on each run and is
+**git-ignored**, so it won't clutter the repo.
+
+> Note: run from a normal home/office network, every area should return `OK`.
+> The `BLOCKED` status is mainly useful when running from a datacenter IP (e.g.
+> Streamlit Cloud), where Cloudflare is more aggressive — see **Limitations**.
+
+---
+
 ## Area filtering (important)
 
 SPEEDHOME's `/rent/<area>` endpoint is a **geographic radius search** — searching
