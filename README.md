@@ -167,6 +167,7 @@ speedhome-app/
 ├── app.py                  # Streamlit UI (search, tabs, tables, chart, export)
 ├── scraper.py              # Fetch (Cloudflare-aware) + parse + area/rental filters
 ├── utils.py                # Stats, unit classification, insights, Excel export
+├── test_all_areas.py       # Smoke-test harness: scrapes every area, writes CSV
 ├── requirements.txt        # Dependencies (minimum versions)
 ├── requirements.lock.txt   # Exact pinned versions for reproducible installs
 └── README.md
