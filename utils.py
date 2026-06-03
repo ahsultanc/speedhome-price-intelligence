@@ -180,14 +180,13 @@ def build_summary(df: pd.DataFrame) -> pd.DataFrame:
     Expects columns: 'unit_type', 'monthly_price', 'sqft'.
     Returns one row per unit type that has data, in canonical order.
     """
+    columns = [
+        "Unit Type", "Count", "Average (RM)", "Median (RM)", "Mode (RM)",
+        "Fair Price (RM)", "Min (RM)", "Max (RM)", "Avg sqft", "Price/sqft (RM)",
+    ]
     rows = []
     if df.empty:
-        return pd.DataFrame(
-            columns=[
-                "Unit Type", "Count", "Average (RM)", "Median (RM)",
-                "Mode (RM)", "Fair Price (RM)", "Avg sqft",
-            ]
-        )
+        return pd.DataFrame(columns=columns)
 
     def _clean(values, *, positive_only=False):
         """Drop None and NaN (and non-positive when requested)."""
@@ -206,19 +205,26 @@ def build_summary(df: pd.DataFrame) -> pd.DataFrame:
         if not prices:
             continue
         sizes = _clean(sub["sqft"].tolist(), positive_only=True)
+        avg_price = mean(prices)
+        avg_sqft = mean(sizes) if sizes else None
         rows.append(
             {
                 "Unit Type": unit,
                 "Count": len(prices),
-                "Average (RM)": round(mean(prices), 2),
+                "Average (RM)": round(avg_price, 2),
                 "Median (RM)": round(median(prices), 2),
                 "Mode (RM)": round(safe_mode(prices), 2) if safe_mode(prices) else None,
                 "Fair Price (RM)": round(fair_price(prices), 2) if fair_price(prices) else None,
-                "Avg sqft": round(mean(sizes), 1) if sizes else None,
+                "Min (RM)": round(min(prices), 2),
+                "Max (RM)": round(max(prices), 2),
+                "Avg sqft": round(avg_sqft, 1) if avg_sqft else None,
+                # Average monthly rent per square foot (None when size unknown).
+                "Price/sqft (RM)": round(avg_price / avg_sqft, 2)
+                if avg_sqft else None,
             }
         )
 
-    return pd.DataFrame(rows)
+    return pd.DataFrame(rows, columns=columns)
 
 
 # --------------------------------------------------------------------------- #

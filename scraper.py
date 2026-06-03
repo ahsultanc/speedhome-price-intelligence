@@ -160,6 +160,22 @@ def is_speedhome_url(text: str) -> bool:
     return text.startswith("http") and "speedhome.com" in text
 
 
+# Lookup for restoring canonical casing (e.g. "klcc" -> "KLCC",
+# "desa parkcity" -> "Desa ParkCity") from any user/URL-derived spelling.
+_AREA_CANONICAL = {re.sub(r"[^a-z0-9]", "", a.lower()): a for a in AREAS}
+
+
+def canonical_area_name(name: str) -> str:
+    """Return the canonical, properly-cased area name.
+
+    Matches against the known ``AREAS`` list (ignoring case/spacing) so
+    "klcc" -> "KLCC" and "chow kit" -> "Chow Kit". Falls back to Title Case
+    for unknown areas.
+    """
+    key = re.sub(r"[^a-z0-9]", "", str(name or "").lower())
+    return _AREA_CANONICAL.get(key, str(name or "").strip().title())
+
+
 def detail_url(slug: str | None) -> str:
     """SPEEDHOME listing detail pages live at /details/<slug>."""
     if not slug:
@@ -622,7 +638,8 @@ def scrape_area(query: str, max_pages: int = 20):
                 seen_links.add(it["link"])
             listings.extend(new_items)
 
-    area_name = area.strip().title() if not is_speedhome_url(query) else area
+    # Canonical casing for display/insights ("klcc" -> "KLCC").
+    area_name = canonical_area_name(area)
     meta = {
         "area": area_name,
         "area_term": area_name,

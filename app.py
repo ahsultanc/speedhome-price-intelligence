@@ -330,35 +330,67 @@ for tab, (label, rental_type) in zip(tab_objects, RENTAL_TABS):
             ]
         ]
 
+        # --- Sort & filter controls -------------------------------------- #
+        room_options = sorted(display["Room type"].dropna().unique().tolist())
+        sort_options = {
+            "Default": (None, True),
+            "Monthly price ↑ (low→high)": ("Monthly price (RM)", True),
+            "Monthly price ↓ (high→low)": ("Monthly price (RM)", False),
+            "sqft ↑ (small→large)": ("sqft", True),
+            "sqft ↓ (large→small)": ("sqft", False),
+        }
+        fcol, scol = st.columns([2, 1])
+        chosen_rooms = fcol.multiselect(
+            "Filter by room type",
+            options=room_options,
+            default=room_options,
+            key=f"roomfilter_{rental_type}",
+        )
+        sort_choice = scol.selectbox(
+            "Sort by",
+            options=list(sort_options.keys()),
+            index=0,
+            key=f"sort_{rental_type}",
+        )
+
+        view = display[display["Room type"].isin(chosen_rooms)] if chosen_rooms else display
+        sort_col, ascending = sort_options[sort_choice]
+        if sort_col:
+            view = view.sort_values(sort_col, ascending=ascending, na_position="last")
+
         # On-screen view: format numbers and replace any None/NaN with "—".
         # (The numeric `display` frame is kept for the Excel export below.)
         table_view = humanize_for_display(
-            display,
+            view,
             numeric_cols=("Monthly price (RM)", "Annual price (RM)", "sqft"),
             skip_cols=("Listing",),
         )
-        st.dataframe(
-            table_view,
-            use_container_width=True,
-            hide_index=True,
-            column_config={
-                "Title": st.column_config.TextColumn("Title", width="medium"),
-                "Property name": st.column_config.TextColumn(
-                    "Property name", width="medium"
-                ),
-                "Address": st.column_config.TextColumn("Address", width="large"),
-                # Clickable verification link — kept as the LAST column.
-                "Listing": st.column_config.LinkColumn(
-                    "View Listing",
-                    display_text="🔗 View Listing",
-                    width="medium",
-                ),
-            },
-        )
-        st.caption(
-            "Tip: click any cell to expand long text, or use the **View Listing** "
-            "link in the last column to open the original listing on SPEEDHOME."
-        )
+        if view.empty:
+            st.info("No listings match the selected room-type filter.")
+        else:
+            st.dataframe(
+                table_view,
+                use_container_width=True,
+                hide_index=True,
+                column_config={
+                    "Title": st.column_config.TextColumn("Title", width="medium"),
+                    "Property name": st.column_config.TextColumn(
+                        "Property name", width="medium"
+                    ),
+                    "Address": st.column_config.TextColumn("Address", width="large"),
+                    # Clickable verification link — kept as the LAST column.
+                    "Listing": st.column_config.LinkColumn(
+                        "View Listing",
+                        display_text="🔗 View Listing",
+                        width="medium",
+                    ),
+                },
+            )
+            st.caption(
+                f"Showing **{len(view)}** of **{len(display)}** listings · "
+                "click any cell to expand text, or use the **View Listing** link "
+                "to open the original on SPEEDHOME."
+            )
 
         # --- Excel download ---------------------------------------------- #
         st.subheader("⬇️ Export")
