@@ -320,7 +320,7 @@ if app_mode == "🔍 Single Search":
         st.stop()
 
     # Data freshness timestamp (Asia/Kuala_Lumpur).
-    st.caption(f"🕒 Data scraped at: **{meta.get('scraped_at', '—')} WIB**")
+    st.caption(f"🕒 Data scraped at: **{meta.get('scraped_at', '—')} MYT**")
 
     # Apply strict area filter (for caption display before tabs)
     radius_total = len(all_listings)
@@ -552,8 +552,8 @@ else:
 
     # Data freshness timestamp (Asia/Kuala_Lumpur) for both areas.
     st.caption(
-        f"🕒 Data scraped at: **{meta_a.get('scraped_at', '—')} WIB** ({name_a}) · "
-        f"**{meta_b.get('scraped_at', '—')} WIB** ({name_b})"
+        f"🕒 Data scraped at: **{meta_a.get('scraped_at', '—')} MYT** ({name_a}) · "
+        f"**{meta_b.get('scraped_at', '—')} MYT** ({name_b})"
     )
 
     # Apply strict filter
