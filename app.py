@@ -372,22 +372,19 @@ if app_mode == "🔍 Single Search":
             if not listings:
                 if not all_listings_filtered and strict_area and radius_total > 0:
                     st.warning(
-                        f"🔍 None of the **{radius_total}** nearby listings are actually "
-                        f"in **{area}**. Untick 'Only show listings in this area' to see them."
+                        f"🔍 **Tidak ada listing yang ditemukan di {area}.**\n\n"
+                        "Coba: (1) Matikan filter **'Only show listings in this area'** "
+                        "di sidebar, atau (2) Pilih area lain."
                     )
                 elif not all_listings_filtered:
                     st.warning(
-                        f"😕 No listings found for **{area}**. Try another area or paste a direct URL."
-                    )
-                elif rental_type == "daily":
-                    st.info(
-                        "🗓️ **No daily / short-stay rentals here.** SPEEDHOME listings on "
-                        f"`/rent/{area}` are monthly-tenancy leases. See the **Monthly** tab."
+                        f"😕 **Tidak ada listing yang ditemukan di {area}.** "
+                        "Coba pilih area lain dari daftar."
                     )
                 else:
                     st.info(
-                        f"No **{label.lower()}** rentals matched for **{area}**. "
-                        "Try the **Monthly** tab for the full set."
+                        f"Tidak ada listing **{label.lower()}** untuk **{area}**. "
+                        "Lihat tab **Monthly** untuk data lengkap."
                     )
                 continue
 
@@ -409,6 +406,19 @@ if app_mode == "🔍 Single Search":
 
             # Price summary table
             summary = build_summary(df)
+
+            # "So what?" highlight (Monthly tab) — plain-language takeaway using
+            # the most-listed unit type's Fair Price and Min.
+            if rental_type == "monthly" and not summary.empty:
+                top = summary.sort_values("Count", ascending=False).iloc[0]
+                fair, lo = top.get("Fair Price (RM)"), top.get("Min (RM)")
+                if pd.notna(fair) and pd.notna(lo):
+                    st.success(
+                        f"💡 Untuk **{top['Unit Type']}** di **{area}**, harga wajar "
+                        f"sekitar **RM {fair:,.0f}/bulan**. Budget di bawah "
+                        f"**RM {lo:,.0f}** termasuk murah untuk area ini."
+                    )
+
             st.subheader("📊 Price Summary by Unit Type")
             if summary.empty:
                 st.info("Not enough priced data to build a summary.")
@@ -421,21 +431,41 @@ if app_mode == "🔍 Single Search":
             for sentence in generate_insights(summary, area, len(listings)):
                 st.markdown(f"- {sentence}")
 
-            # Box plot
-            st.subheader("📦 Price Distribution per Unit Type")
-            plot_df = df.dropna(subset=["monthly_price"])
-            if not plot_df.empty:
-                from utils import UNIT_TYPE_ORDER
-                order = [u for u in UNIT_TYPE_ORDER if u in plot_df["unit_type"].unique()]
-                fig = px.box(
-                    plot_df, x="unit_type", y="monthly_price",
-                    category_orders={"unit_type": order},
-                    points="outliers",
-                    labels={"unit_type": "Unit Type", "monthly_price": "Monthly Price (RM)"},
-                    color="unit_type",
+            # Price distribution — simple grouped bar (Average vs Median) by
+            # default; the box plot lives behind an "Advanced" expander.
+            st.subheader("📊 Average vs Median Price per Unit Type")
+            if not summary.empty:
+                fig_bar = go.Figure(data=[
+                    go.Bar(name="Average", x=summary["Unit Type"],
+                           y=summary["Average (RM)"], marker_color="#4C8BF5"),
+                    go.Bar(name="Median", x=summary["Unit Type"],
+                           y=summary["Median (RM)"], marker_color="#FF7043"),
+                ])
+                fig_bar.update_layout(
+                    barmode="group", yaxis_title="Monthly Rent (RM)",
+                    margin=dict(t=30, b=10),
+                    legend=dict(orientation="h", yanchor="bottom", y=1.02,
+                                xanchor="right", x=1),
                 )
-                fig.update_layout(showlegend=False, margin=dict(t=10, b=10))
-                st.plotly_chart(fig, use_container_width=True, key=f"boxplot_{rental_type}")
+                st.plotly_chart(fig_bar, use_container_width=True, key=f"bar_{rental_type}")
+
+                with st.expander("📦 Advanced: Price Distribution (box plot)"):
+                    plot_df = df.dropna(subset=["monthly_price"])
+                    if not plot_df.empty:
+                        from utils import UNIT_TYPE_ORDER
+                        order = [u for u in UNIT_TYPE_ORDER if u in plot_df["unit_type"].unique()]
+                        fig = px.box(
+                            plot_df, x="unit_type", y="monthly_price",
+                            category_orders={"unit_type": order}, points="outliers",
+                            labels={"unit_type": "Unit Type",
+                                    "monthly_price": "Monthly Price (RM)"},
+                            color="unit_type",
+                        )
+                        fig.update_layout(showlegend=False, margin=dict(t=10, b=10))
+                        st.plotly_chart(fig, use_container_width=True,
+                                        key=f"boxplot_{rental_type}")
+                    else:
+                        st.info("No priced listings to plot.")
             else:
                 st.info("No priced listings to plot.")
 
@@ -582,23 +612,33 @@ else:
         f"**{meta_b.get('scraped_at', '—')} MYT** ({name_b})"
     )
 
+    # Rental type for the comparison (Monthly / Yearly). All metrics, charts and
+    # summary tables below use the selected type.
+    cmp_rental = st.radio(
+        "Rental type", ["Monthly", "Yearly"], horizontal=True, key="cmp_rental",
+    ).lower()
+    st.caption(
+        "Semua harga tetap per bulan (RM/bulan). **Yearly** = listing dengan "
+        "sewa minimum 12 bulan, bukan total tahunan."
+    )
+
     # Apply strict filter
     if strict_cmp:
         listings_a = filter_by_area(listings_a, meta_a.get("area_term", name_a))
         listings_b = filter_by_area(listings_b, meta_b.get("area_term", name_b))
 
-    # Filter to monthly (most useful for comparison)
-    monthly_a = filter_by_rental_type(listings_a, "monthly")
-    monthly_b = filter_by_rental_type(listings_b, "monthly")
+    # Filter to the chosen rental type
+    sel_a = filter_by_rental_type(listings_a, cmp_rental)
+    sel_b = filter_by_rental_type(listings_b, cmp_rental)
 
-    df_a = pd.DataFrame(monthly_a) if monthly_a else pd.DataFrame()
-    df_b = pd.DataFrame(monthly_b) if monthly_b else pd.DataFrame()
+    df_a = pd.DataFrame(sel_a) if sel_a else pd.DataFrame()
+    df_b = pd.DataFrame(sel_b) if sel_b else pd.DataFrame()
 
     # ------------------------------------------------------------------ #
     # SECTION 1 — HEADLINE METRICS COMPARISON
     # ------------------------------------------------------------------ #
     st.markdown("---")
-    st.subheader("📊 Head-to-Head: Key Metrics (Monthly Rentals)")
+    st.subheader(f"📊 Head-to-Head: Key Metrics ({cmp_rental.title()} Rentals)")
 
     def get_metrics(df: pd.DataFrame) -> dict:
         if df.empty or "monthly_price" not in df.columns:
