@@ -60,6 +60,15 @@ TIMEOUT = 30
 MAX_RETRIES = 3      # full retry rounds before giving up on a request
 RETRY_DELAY_RANGE = (2.0, 4.0)  # random backoff (seconds) between retries
 
+# Canonical list of supported areas (single source of truth — the UI's
+# autocomplete and the test harness both import this).
+AREAS = [
+    "Mont Kiara", "Bangsar", "KLCC", "Petaling Jaya", "Chow Kit", "Ampang",
+    "Sri Hartamas", "Damansara", "Subang Jaya", "Shah Alam", "Cyberjaya",
+    "Bukit Jalil", "Puchong", "Kepong", "Setapak", "Wangsa Maju", "Cheras",
+    "Desa ParkCity", "Sunway", "Ara Damansara", "Tropicana",
+]
+
 # Five realistic desktop browser User-Agents, each paired with a matching
 # curl_cffi TLS-impersonation profile (so the TLS fingerprint matches the UA).
 USER_AGENTS = [

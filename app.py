@@ -13,6 +13,7 @@ import plotly.express as px
 import streamlit as st
 
 from scraper import (
+    AREAS,
     filter_by_area,
     filter_by_rental_type,
     is_speedhome_url,
@@ -35,13 +36,8 @@ st.set_page_config(
     layout="wide",
 )
 
-# Seed list for the autocomplete dropdown.
-SEED_AREAS = [
-    "Mont Kiara", "Bangsar", "KLCC", "Petaling Jaya", "Chow Kit", "Ampang",
-    "Sri Hartamas", "Damansara", "Subang Jaya", "Shah Alam", "Cyberjaya",
-    "Bukit Jalil", "Puchong", "Kepong", "Setapak", "Wangsa Maju", "Cheras",
-    "Desa ParkCity", "Sunway", "Ara Damansara", "Tropicana",
-]
+# Seed list for the autocomplete dropdown (single source of truth in scraper.py).
+SEED_AREAS = AREAS
 
 RENTAL_TABS = [("Daily", "daily"), ("Monthly", "monthly"), ("Yearly", "yearly")]
 
