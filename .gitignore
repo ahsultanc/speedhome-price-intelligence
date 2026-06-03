@@ -1,0 +1,24 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.ipynb_checkpoints/
+
+# Virtual environments
+.venv/
+venv/
+env/
+
+# Local reproducible-install lockfile (Windows/Python-specific; Streamlit Cloud
+# uses requirements.txt). Keep it local; don't deploy it.
+requirements.lock.txt
+
+# Editor / OS / tooling
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+.claude/
+
+# Streamlit local secrets (never commit these)
+.streamlit/secrets.toml
