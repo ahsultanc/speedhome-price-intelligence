@@ -30,8 +30,19 @@ in **RM** and **sqft**.
   Includes **sort** (by monthly price or sqft, ascending/descending) and a
   **filter by room type**; missing values render as a clean "—".
 - **Rental-type tabs** — Daily / Monthly / Yearly, split by each listing's minimum
-  lease duration, each with a clear empty-state message when there's no data.
-- **Box-plot price distribution** per unit type (Plotly).
+  lease duration, each with a clear empty-state message when there's no data. The
+  **Daily tab is hidden automatically** when there are no daily listings.
+- **Price-distribution charts** — a simple **Average vs Median grouped bar chart**
+  per unit type shows by default; a full **box plot** is tucked behind an
+  *“Advanced: Price Distribution”* expander.
+- **“So what?” takeaway** — a one-line, plain-language highlight above the summary
+  (Monthly tab) using the most-listed unit type's Fair Price and minimum, e.g.
+  *“For 2BR in Mont Kiara, a fair price is ~RM 2,200/month.”*
+- **Compare Areas mode** — pick two areas and see a side-by-side head-to-head:
+  key metrics (average, median, min, max, price/sqft) with the cheaper side
+  highlighted, a grouped bar chart, an overlaid price-distribution box plot,
+  both summary tables, and an auto-generated verdict. A **Monthly / Yearly toggle**
+  recomputes every metric, chart, and table for the selected rental type.
 - **Auto-generated insights** — cheapest/priciest unit type, most-listed type, and
   best value per sqft, written as plain-English sentences.
 - **Excel export** → `SPEEDHOME_[Area]_[YYYYMMDD].xlsx` with two sheets
