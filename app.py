@@ -763,42 +763,79 @@ else:
     )
     st.plotly_chart(fig_cmp, use_container_width=True, key="cmp_bar_chart")
 
-    # ------------------------------------------------------------------ #
-    # SECTION 3 — PRICE DISTRIBUTION OVERLAY (BOX PLOT)
-    # ------------------------------------------------------------------ #
-    st.subheader("📦 Price Distribution Comparison")
+    # Per-unit-type summaries — reused by the chart below AND the tables (Section 4).
+    summary_a = build_summary(df_a) if not df_a.empty else pd.DataFrame()
+    summary_b = build_summary(df_b) if not df_b.empty else pd.DataFrame()
 
-    combined_plot = []
-    for df_, label in [(df_a, name_a), (df_b, name_b)]:
-        if not df_.empty and "monthly_price" in df_.columns:
-            tmp = df_.dropna(subset=["monthly_price"])[["monthly_price", "unit_type"]].copy()
-            tmp["area"] = label
-            combined_plot.append(tmp)
+    # ------------------------------------------------------------------ #
+    # SECTION 3 — PRICE PER UNIT TYPE
+    # Default: grouped bar (Average & Median per unit type, Area A vs Area B),
+    # consistent with Single Search. The box plot lives behind an expander.
+    # ------------------------------------------------------------------ #
+    st.subheader("📊 Price per Unit Type")
 
-    if combined_plot:
-        plot_df = pd.concat(combined_plot, ignore_index=True)
-        fig_box = px.box(
-            plot_df, x="unit_type", y="monthly_price", color="area",
-            points="outliers",
-            labels={"unit_type": "Unit Type", "monthly_price": "Monthly Price (RM)", "area": "Area"},
-            color_discrete_map={name_a: "#4C8BF5", name_b: "#FF7043"},
-        )
-        fig_box.update_layout(
+    from utils import UNIT_TYPE_ORDER
+    units = [
+        u for u in UNIT_TYPE_ORDER
+        if (not summary_a.empty and u in summary_a["Unit Type"].values)
+        or (not summary_b.empty and u in summary_b["Unit Type"].values)
+    ]
+
+    def _unit_vals(summary, col):
+        if summary.empty:
+            return [None] * len(units)
+        s = summary.set_index("Unit Type")[col]
+        return [float(s[u]) if u in s.index and pd.notna(s[u]) else None for u in units]
+
+    if units:
+        fig_unit = go.Figure(data=[
+            go.Bar(name=f"{name_a} Avg", x=units, y=_unit_vals(summary_a, "Average (RM)"),
+                   marker_color="#4C8BF5"),
+            go.Bar(name=f"{name_b} Avg", x=units, y=_unit_vals(summary_b, "Average (RM)"),
+                   marker_color="#FF7043"),
+            go.Bar(name=f"{name_a} Median", x=units, y=_unit_vals(summary_a, "Median (RM)"),
+                   marker_color="#A9C7F8"),
+            go.Bar(name=f"{name_b} Median", x=units, y=_unit_vals(summary_b, "Median (RM)"),
+                   marker_color="#FFB59B"),
+        ])
+        fig_unit.update_layout(
+            barmode="group", yaxis_title="Monthly Rent (RM)",
             legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1),
-            margin=dict(t=40, b=10),
+            margin=dict(t=40, b=10), height=440,
         )
-        st.plotly_chart(fig_box, use_container_width=True, key="cmp_box_chart")
+        st.plotly_chart(fig_unit, use_container_width=True, key="cmp_unit_bar")
+
+        with st.expander("📦 Advanced: Price Distribution (box plot)"):
+            combined_plot = []
+            for df_, label in [(df_a, name_a), (df_b, name_b)]:
+                if not df_.empty and "monthly_price" in df_.columns:
+                    tmp = df_.dropna(subset=["monthly_price"])[["monthly_price", "unit_type"]].copy()
+                    tmp["area"] = label
+                    combined_plot.append(tmp)
+            if combined_plot:
+                plot_df = pd.concat(combined_plot, ignore_index=True)
+                fig_box = px.box(
+                    plot_df, x="unit_type", y="monthly_price", color="area",
+                    points="outliers",
+                    labels={"unit_type": "Unit Type", "monthly_price": "Monthly Price (RM)",
+                            "area": "Area"},
+                    color_discrete_map={name_a: "#4C8BF5", name_b: "#FF7043"},
+                )
+                fig_box.update_layout(
+                    legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1),
+                    margin=dict(t=40, b=10),
+                )
+                st.plotly_chart(fig_box, use_container_width=True, key="cmp_box_chart")
+            else:
+                st.info("Not enough priced data to render distribution chart.")
     else:
-        st.info("Not enough priced data to render distribution chart.")
+        st.info("Not enough priced data to render charts.")
 
     # ------------------------------------------------------------------ #
     # SECTION 4 — PRICE SUMMARY TABLES (side by side)
     # ------------------------------------------------------------------ #
     st.subheader("📋 Price Summary by Unit Type")
     col_a, col_b = st.columns(2)
-
-    summary_a = build_summary(df_a) if not df_a.empty else pd.DataFrame()
-    summary_b = build_summary(df_b) if not df_b.empty else pd.DataFrame()
 
     with col_a:
         st.markdown(f"**🔵 {name_a}**")
